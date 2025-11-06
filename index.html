@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analog Modulation Visualizer</title>
+  <title>Analog Modulation Visualizer (Two Cycles)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -12,48 +12,66 @@
   <h1 class="text-3xl font-bold mb-6 text-center">Analog Modulation Visualizer (Two Cycles)</h1>
 
   <!-- Input Section -->
-  <div class="grid grid-cols-2 gap-4 mb-6 w-full max-w-3xl bg-white p-6 rounded-2xl shadow">
+  <div class="grid grid-cols-2 gap-4 mb-6 w-full max-w-4xl bg-white p-6 rounded-2xl shadow">
     <div>
       <h2 class="text-lg font-semibold mb-2">AM Parameters</h2>
       <label class="block mb-2">Carrier Frequency (Hz):</label>
-      <input id="amFc" type="number" value="5770" class="w-full border p-2 rounded">
+      <input id="amFc" type="number" value="1000" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-      <input id="amFm" type="number" value="577" class="w-full border p-2 rounded">
+      <input id="amFm" type="number" value="100" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Carrier Amplitude:</label>
-      <input id="amAc" type="number" value="9.6" class="w-full border p-2 rounded">
+      <input id="amAc" type="number" value="1" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Message Amplitude:</label>
-      <input id="amAm" type="number" value="4.8" class="w-full border p-2 rounded">
+      <input id="amAm" type="number" value="0.5" class="w-full border p-2 rounded">
     </div>
 
-   <div>
-  <h2 class="text-lg font-semibold mb-2">FM Parameters</h2>
-  <label class="block mb-2">Carrier Frequency (Hz):</label>
-  <input id="fmFc" type="number" value="5770" class="w-full border p-2 rounded">
-  
-  <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-  <input id="fmFm" type="number" value="577" class="w-full border p-2 rounded">
-  
-  <label class="block mb-2 mt-3">Frequency Deviation:</label>
-  <input id="fmDev" type="number" value="2000" class="w-full border p-2 rounded">
-  
-  <label class="block mb-2 mt-3">Amplitude:</label>
-  <input id="fmAmp" type="number" value="9.6" class="w-full border p-2 rounded">
-  
-  <label class="block mb-2 mt-3">Modulation Index (Beta):</label>
-</div>
+    <div>
+      <h2 class="text-lg font-semibold mb-2">FM Parameters</h2>
+      <label class="block mb-2">Carrier Frequency (Hz):</label>
+      <input id="fmFc" type="number" value="1000" class="w-full border p-2 rounded">
+      <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
+      <input id="fmFm" type="number" value="100" class="w-full border p-2 rounded">
+      <label class="block mb-2 mt-3">Modulation Index (β):</label>
+      <input id="fmBeta" type="number" value="2" class="w-full border p-2 rounded">
+      <label class="block mb-2 mt-3">Amplitude:</label>
+      <input id="fmAmp" type="number" value="1" class="w-full border p-2 rounded">
+    </div>
   </div>
 
-  <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">Generate</button>
+  <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">
+    Generate Signals
+  </button>
 
-  <!-- Chart -->
-  <div class="w-full max-w-5xl bg-white p-4 rounded-2xl shadow">
-    <canvas id="waveCanvas" height="150"></canvas>
+  <!-- Chart containers -->
+  <div class="w-full max-w-5xl space-y-8">
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-2 text-center">Amplitude Modulation (AM)</h2>
+      <canvas id="amChart" height="150"></canvas>
+    </div>
+
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-2 text-center">Frequency Modulation (FM)</h2>
+      <canvas id="fmChart" height="150"></canvas>
+    </div>
+
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-2 text-center">Double Sideband Suppressed Carrier (DSB-SC)</h2>
+      <canvas id="dsbscChart" height="150"></canvas>
+    </div>
+
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-2 text-center">Single Sideband Suppressed Carrier (SSB-SC)</h2>
+      <canvas id="ssbscChart" height="150"></canvas>
+    </div>
   </div>
 
   <script>
-    let chart;
+    let charts = [];
 
     function generateSignals() {
+      charts.forEach(ch => ch.destroy());
+      charts = [];
+
       const amFc = parseFloat(document.getElementById('amFc').value);
       const amFm = parseFloat(document.getElementById('amFm').value);
       const amAc = parseFloat(document.getElementById('amAc').value);
@@ -61,55 +79,73 @@
 
       const fmFc = parseFloat(document.getElementById('fmFc').value);
       const fmFm = parseFloat(document.getElementById('fmFm').value);
-      const fmDev = parseFloat(document.getElementById('fmDev').value);
+      const fmBeta = parseFloat(document.getElementById('fmBeta').value);
       const fmAmp = parseFloat(document.getElementById('fmAmp').value);
 
-      // Time axis for 2 cycles of lowest message frequency
       const t = [];
       const step = 1 / (amFc * 100);
       const totalTime = 2 / amFm;
       for (let x = 0; x <= totalTime; x += step) t.push(x);
 
-      // Message signal
-      const m = t.map(x => Math.sin(2 * Math.PI * amFm * x));
+      // Message & Carrier
+      const msg = t.map(x => Math.sin(2 * Math.PI * amFm * x));
+      const carrier = t.map(x => Math.sin(2 * Math.PI * amFc * x));
 
       // AM Signal
       const am = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
 
-      // FM Signal
-      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + ((fmDev/fmFC) * Math.sin(2 * Math.PI * fmFm * x)))));
+      // FM Signal using modulation index β
+      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x + fmBeta * Math.sin(2 * Math.PI * fmFm * x)));
 
-      // DSB-SC
+      // DSB-SC & SSB-SC
       const dsbsc = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
-
-      // SSB-SC (approximation using Hilbert transform concept)
       const ssbsc = t.map((x, i) => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.cos(2 * Math.PI * amFc * x) - amAm * Math.cos(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
 
-      // Plot
-      const ctx = document.getElementById('waveCanvas').getContext('2d');
-      if (chart) chart.destroy();
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: t.map(x => x.toFixed(4)),
-          datasets: [
-            { label: 'AM', data: am, borderColor: 'red', borderWidth: 1, fill: false },
-            { label: 'FM', data: fm, borderColor: 'blue', borderWidth: 1, fill: false },
-            { label: 'DSB-SC', data: dsbsc, borderColor: 'green', borderWidth: 1, fill: false },
-            { label: 'SSB-SC', data: ssbsc, borderColor: 'orange', borderWidth: 1, fill: false }
-          ]
-        },
-        options: {
-          responsive: true,
-          animation: false,
-          scales: {
-            x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } },
-            y: { title: { display: true, text: 'Amplitude' } }
+      // Helper to plot charts
+      function plotChart(id, datasets) {
+        const ctx = document.getElementById(id).getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: t.map(x => x.toFixed(4)),
+            datasets
           },
-          plugins: { legend: { position: 'top' } }
-        }
-      });
+          options: {
+            responsive: true,
+            animation: false,
+            scales: {
+              x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } },
+              y: { title: { display: true, text: 'Amplitude' } }
+            },
+            plugins: { legend: { position: 'top' } }
+          }
+        });
+        charts.push(chart);
+      }
+
+      // Plot AM
+      plotChart('amChart', [
+        { label: 'Message Signal', data: msg, borderColor: 'green', borderWidth: 1, fill: false },
+        { label: 'Carrier Signal', data: carrier, borderColor: 'gray', borderWidth: 1, fill: false },
+        { label: 'AM Signal', data: am, borderColor: 'red', borderWidth: 1.5, fill: false },
+      ]);
+
+      // Plot FM
+      plotChart('fmChart', [
+        { label: 'Message Signal', data: msg, borderColor: 'green', borderWidth: 1, fill: false },
+        { label: 'Carrier Signal', data: carrier, borderColor: 'gray', borderWidth: 1, fill: false },
+        { label: 'FM Signal', data: fm, borderColor: 'blue', borderWidth: 1.5, fill: false },
+      ]);
+
+      // Plot DSB-SC
+      plotChart('dsbscChart', [
+        { label: 'DSB-SC Signal', data: dsbsc, borderColor: 'purple', borderWidth: 1.5, fill: false }
+      ]);
+
+      // Plot SSB-SC
+      plotChart('ssbscChart', [
+        { label: 'SSB-SC Signal', data: ssbsc, borderColor: 'orange', borderWidth: 1.5, fill: false }
+      ]);
     }
 
     window.onload = generateSignals;
@@ -117,9 +153,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
