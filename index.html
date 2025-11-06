@@ -7,10 +7,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6" onload="initializeCharts()">
   <h1 class="text-3xl font-bold mb-6 text-blue-700">Analog Modulation Visualizer</h1>
 
-  <!-- Input Controls -->
   <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-3xl mb-8">
     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
       <div>
@@ -36,14 +35,18 @@
     </div>
 
     <div class="flex justify-center gap-4 mt-6">
-      <button onclick="plotSignal('AM')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Show AM</button>
-      <button onclick="plotSignal('FM')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Show FM</button>
-      <button onclick="plotSignal('DSBSC')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Show DSB-SC</button>
-      <button onclick="plotSignal('SSBSC')" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">Show SSB-SC</button>
+      <button onclick="plotMessage()" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700">Show Message</button>
+      <button onclick="plotCarrier()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Show Carrier</button>
+    </div>
+
+    <div class="flex justify-center gap-4 mt-4">
+      <button onclick="plotModulated('AM')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Show AM</button>
+      <button onclick="plotModulated('FM')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Show FM</button>
+      <button onclick="plotModulated('DSBSC')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Show DSB-SC</button>
+      <button onclick="plotModulated('SSBSC')" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">Show SSB-SC</button>
     </div>
   </div>
 
-  <!-- Chart Section -->
   <div class="w-full max-w-4xl">
     <canvas id="chart1" class="mb-6"></canvas>
     <canvas id="chart2" class="mb-6"></canvas>
@@ -52,18 +55,60 @@
 
   <script>
     let chart1, chart2, chart3;
+    let t = [];
+    let msg = [];
+    let carrier = [];
 
-    function plotSignal(type) {
+    const fs = 1000; // sampling frequency
+    const sampleLength = 400;
+
+    function getParams() {
       const fm = parseFloat(document.getElementById("fm").value);
       const fc = parseFloat(document.getElementById("fc").value);
       const am = parseFloat(document.getElementById("am").value);
       const ac = parseFloat(document.getElementById("ac").value);
       const beta = parseFloat(document.getElementById("beta").value);
+      return { fm, fc, am, ac, beta };
+    }
 
-      const fs = 1000; // sampling frequency
-      const t = Array.from({ length: 400 }, (_, i) => i / fs); // only two cycles of AM
-      const msg = t.map(x => am * Math.sin(2 * Math.PI * fm * x));
-      const carrier = t.map(x => ac * Math.sin(2 * Math.PI * fc * x));
+    function calculateSignals() {
+      const { fm, fc, am, ac } = getParams();
+
+      t = Array.from({ length: sampleLength }, (_, i) => i / fs);
+      msg = t.map(x => am * Math.sin(2 * Math.PI * fm * x));
+      carrier = t.map(x => ac * Math.sin(2 * Math.PI * fc * x));
+    }
+
+    function initializeCharts() {
+      // Calculate initial signals
+      calculateSignals();
+
+      // Draw initial empty charts
+      drawChart('chart1', t, [], 'Message Signal', 'blue');
+      drawChart('chart2', t, [], 'Carrier Signal', 'green');
+      drawChart('chart3', t, [], 'Modulated Signal', 'red');
+    }
+    
+    function plotMessage() {
+        calculateSignals(); // Recalculate based on current inputs
+        drawChart('chart1', t, msg, 'Message Signal', 'blue');
+        // Clear other charts (optional, but ensures only message is shown)
+        drawChart('chart2', t, [], 'Carrier Signal', 'green');
+        drawChart('chart3', t, [], 'Modulated Signal', 'red');
+    }
+
+    function plotCarrier() {
+        calculateSignals(); // Recalculate based on current inputs
+        drawChart('chart2', t, carrier, 'Carrier Signal', 'green');
+        // Clear other charts
+        drawChart('chart1', t, [], 'Message Signal', 'blue');
+        drawChart('chart3', t, [], 'Modulated Signal', 'red');
+    }
+
+    function plotModulated(type) {
+      const { fm, fc, am, ac, beta } = getParams();
+      calculateSignals(); // Ensure message and carrier are up to date
+
       let modulated = [];
 
       if (type === 'AM') {
@@ -78,35 +123,55 @@
         modulated = t.map((x, i) => ac * (msg[i] * Math.cos(2 * Math.PI * fc * x) - phaseShifted[i] * Math.sin(2 * Math.PI * fc * x)));
       }
 
-      drawChart('chart1', t, msg, 'Message Signal', 'blue');
-      drawChart('chart2', t, carrier, 'Carrier Signal', 'green');
+      // Plot the modulated signal in chart 3
       drawChart('chart3', t, modulated, `${type} Modulated Signal`, 'red');
+      
+      // Clear other charts
+      drawChart('chart1', t, [], 'Message Signal', 'blue');
+      drawChart('chart2', t, [], 'Carrier Signal', 'green');
     }
 
+    // The core plotting function remains the same
     function drawChart(id, t, data, label, color) {
       const ctx = document.getElementById(id).getContext('2d');
-      if (window[id]) window[id].destroy();
+      if (window[id]) window[id].destroy(); // Destroy previous instance
 
-      window[id] = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: t,
-          datasets: [{
+      // Only plot if data is available, otherwise show empty axes
+      const datasets = data.length > 0 ? [{
             label,
             data,
             borderColor: color,
             borderWidth: 2,
             fill: false,
-          }]
+            pointRadius: 0 // Remove points for cleaner wave
+          }] : [];
+
+      window[id] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: t,
+          datasets: datasets
         },
         options: {
           responsive: true,
+          animation: false, // Disable animation for faster updates
           scales: {
             x: {
-              title: { display: true, text: 'Time (s)' }
+              title: { display: true, text: 'Time (s)' },
+              // Set a fixed range for better comparison, max time is sampleLength/fs
+              min: 0,
+              max: sampleLength / fs, 
             },
             y: {
-              title: { display: true, text: 'Amplitude' }
+              title: { display: true, text: 'Amplitude' },
+              // Use a reasonable max/min amplitude based on potential inputs (e.g. up to 10)
+              min: -10, 
+              max: 10,
+            }
+          },
+          plugins: {
+            legend: {
+                display: datasets.length > 0 // Hide legend if no data is plotted
             }
           }
         }
