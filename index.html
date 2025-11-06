@@ -3,153 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analog Modulation Visualizer (Two Cycles)</title>
+  <title>Analog Modulation Visualizer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-900 flex flex-col items-center min-h-screen p-6">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  <h1 class="text-3xl font-bold mb-6 text-blue-700">Analog Modulation Visualizer</h1>
 
-  <h1 class="text-3xl font-bold mb-6 text-center">Analog Modulation Visualizer (Two Cycles)</h1>
-
-  <!-- Input Section -->
-  <div class="grid grid-cols-2 gap-4 mb-6 w-full max-w-4xl bg-white p-6 rounded-2xl shadow">
-    <div>
-      <h2 class="text-lg font-semibold mb-2">AM Parameters</h2>
-      <label class="block mb-2">Carrier Frequency (Hz):</label>
-      <input id="amFc" type="number" value="1000" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-      <input id="amFm" type="number" value="100" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Carrier Amplitude:</label>
-      <input id="amAc" type="number" value="1" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Message Amplitude:</label>
-      <input id="amAm" type="number" value="0.5" class="w-full border p-2 rounded">
+  <!-- Input Controls -->
+  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-3xl mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-semibold">Message Frequency (Hz)</label>
+        <input id="fm" type="number" value="5" class="border p-2 w-full rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Carrier Frequency (Hz)</label>
+        <input id="fc" type="number" value="50" class="border p-2 w-full rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Amplitude (Message)</label>
+        <input id="am" type="number" value="1" class="border p-2 w-full rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Amplitude (Carrier)</label>
+        <input id="ac" type="number" value="1" class="border p-2 w-full rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">FM Modulation Index (β)</label>
+        <input id="beta" type="number" value="5" class="border p-2 w-full rounded-md">
+      </div>
     </div>
 
-    <div>
-      <h2 class="text-lg font-semibold mb-2">FM Parameters</h2>
-      <label class="block mb-2">Carrier Frequency (Hz):</label>
-      <input id="fmFc" type="number" value="1000" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-      <input id="fmFm" type="number" value="100" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Modulation Index (β):</label>
-      <input id="fmBeta" type="number" value="2" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Amplitude:</label>
-      <input id="fmAmp" type="number" value="1" class="w-full border p-2 rounded">
+    <div class="flex justify-center gap-4 mt-6">
+      <button onclick="plotSignal('AM')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Show AM</button>
+      <button onclick="plotSignal('FM')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Show FM</button>
+      <button onclick="plotSignal('DSBSC')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Show DSB-SC</button>
+      <button onclick="plotSignal('SSBSC')" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">Show SSB-SC</button>
     </div>
   </div>
 
-  <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">
-    Generate Signals
-  </button>
-
-  <!-- Chart containers -->
-  <div class="w-full max-w-5xl space-y-8">
-    <div class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2 text-center">Amplitude Modulation (AM)</h2>
-      <canvas id="amChart" height="150"></canvas>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2 text-center">Frequency Modulation (FM)</h2>
-      <canvas id="fmChart" height="150"></canvas>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2 text-center">Double Sideband Suppressed Carrier (DSB-SC)</h2>
-      <canvas id="dsbscChart" height="150"></canvas>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2 text-center">Single Sideband Suppressed Carrier (SSB-SC)</h2>
-      <canvas id="ssbscChart" height="150"></canvas>
-    </div>
+  <!-- Chart Section -->
+  <div class="w-full max-w-4xl">
+    <canvas id="chart1" class="mb-6"></canvas>
+    <canvas id="chart2" class="mb-6"></canvas>
+    <canvas id="chart3" class="mb-6"></canvas>
   </div>
 
   <script>
-    let charts = [];
+    let chart1, chart2, chart3;
 
-    function generateSignals() {
-      charts.forEach(ch => ch.destroy());
-      charts = [];
+    function plotSignal(type) {
+      const fm = parseFloat(document.getElementById("fm").value);
+      const fc = parseFloat(document.getElementById("fc").value);
+      const am = parseFloat(document.getElementById("am").value);
+      const ac = parseFloat(document.getElementById("ac").value);
+      const beta = parseFloat(document.getElementById("beta").value);
 
-      const amFc = parseFloat(document.getElementById('amFc').value);
-      const amFm = parseFloat(document.getElementById('amFm').value);
-      const amAc = parseFloat(document.getElementById('amAc').value);
-      const amAm = parseFloat(document.getElementById('amAm').value);
+      const fs = 1000; // sampling frequency
+      const t = Array.from({ length: 400 }, (_, i) => i / fs); // only two cycles of AM
+      const msg = t.map(x => am * Math.sin(2 * Math.PI * fm * x));
+      const carrier = t.map(x => ac * Math.sin(2 * Math.PI * fc * x));
+      let modulated = [];
 
-      const fmFc = parseFloat(document.getElementById('fmFc').value);
-      const fmFm = parseFloat(document.getElementById('fmFm').value);
-      const fmBeta = parseFloat(document.getElementById('fmBeta').value);
-      const fmAmp = parseFloat(document.getElementById('fmAmp').value);
-
-      const t = [];
-      const step = 1 / (amFc * 100);
-      const totalTime = 2 / amFm;
-      for (let x = 0; x <= totalTime; x += step) t.push(x);
-
-      // Message & Carrier
-      const msg = t.map(x => Math.sin(2 * Math.PI * amFm * x));
-      const carrier = t.map(x => Math.sin(2 * Math.PI * amFc * x));
-
-      // AM Signal
-      const am = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
-
-      // FM Signal using modulation index β
-      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x + fmBeta * Math.sin(2 * Math.PI * fmFm * x)));
-
-      // DSB-SC & SSB-SC
-      const dsbsc = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
-      const ssbsc = t.map((x, i) => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.cos(2 * Math.PI * amFc * x) - amAm * Math.cos(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
-
-      // Helper to plot charts
-      function plotChart(id, datasets) {
-        const ctx = document.getElementById(id).getContext('2d');
-        const chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: t.map(x => x.toFixed(4)),
-            datasets
-          },
-          options: {
-            responsive: true,
-            animation: false,
-            scales: {
-              x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } },
-              y: { title: { display: true, text: 'Amplitude' } }
-            },
-            plugins: { legend: { position: 'top' } }
-          }
-        });
-        charts.push(chart);
+      if (type === 'AM') {
+        modulated = t.map(x => (ac * (1 + (am / ac) * Math.sin(2 * Math.PI * fm * x))) * Math.sin(2 * Math.PI * fc * x));
+      } else if (type === 'FM') {
+        modulated = t.map(x => ac * Math.sin(2 * Math.PI * fc * x + beta * Math.sin(2 * Math.PI * fm * x)));
+      } else if (type === 'DSBSC') {
+        modulated = t.map(x => am * Math.sin(2 * Math.PI * fm * x) * ac * Math.sin(2 * Math.PI * fc * x));
+      } else if (type === 'SSBSC') {
+        // Approximation using Hilbert transform concept (phase shifted message)
+        const phaseShifted = t.map(x => am * Math.cos(2 * Math.PI * fm * x));
+        modulated = t.map((x, i) => ac * (msg[i] * Math.cos(2 * Math.PI * fc * x) - phaseShifted[i] * Math.sin(2 * Math.PI * fc * x)));
       }
 
-      // Plot AM
-      plotChart('amChart', [
-        { label: 'Message Signal', data: msg, borderColor: 'green', borderWidth: 1, fill: false },
-        { label: 'Carrier Signal', data: carrier, borderColor: 'gray', borderWidth: 1, fill: false },
-        { label: 'AM Signal', data: am, borderColor: 'red', borderWidth: 1.5, fill: false },
-      ]);
-
-      // Plot FM
-      plotChart('fmChart', [
-        { label: 'Message Signal', data: msg, borderColor: 'green', borderWidth: 1, fill: false },
-        { label: 'Carrier Signal', data: carrier, borderColor: 'gray', borderWidth: 1, fill: false },
-        { label: 'FM Signal', data: fm, borderColor: 'blue', borderWidth: 1.5, fill: false },
-      ]);
-
-      // Plot DSB-SC
-      plotChart('dsbscChart', [
-        { label: 'DSB-SC Signal', data: dsbsc, borderColor: 'purple', borderWidth: 1.5, fill: false }
-      ]);
-
-      // Plot SSB-SC
-      plotChart('ssbscChart', [
-        { label: 'SSB-SC Signal', data: ssbsc, borderColor: 'orange', borderWidth: 1.5, fill: false }
-      ]);
+      drawChart('chart1', t, msg, 'Message Signal', 'blue');
+      drawChart('chart2', t, carrier, 'Carrier Signal', 'green');
+      drawChart('chart3', t, modulated, `${type} Modulated Signal`, 'red');
     }
 
-    window.onload = generateSignals;
-  </script>
+    function drawChart(id, t, data, label, color) {
+      const ctx = document.getElementById(id).getContext('2d');
+      if (window[id]) window[id].destroy();
 
+      window[id] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: t,
+          datasets: [{
+            label,
+            data,
+            borderColor: color,
+            borderWidth: 2,
+            fill: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: { display: true, text: 'Time (s)' }
+            },
+            y: {
+              title: { display: true, text: 'Amplitude' }
+            }
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>
