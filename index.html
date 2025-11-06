@@ -40,7 +40,6 @@
   <input id="fmAmp" type="number" value="9.6" class="w-full border p-2 rounded">
   
   <label class="block mb-2 mt-3">Modulation Index (Beta):</label>
-  <input id="fmBeta" type="number" value="3.466" readonly class="w-full border p-2 rounded bg-gray-100"> 
 </div>
   </div>
 
@@ -78,7 +77,7 @@
       const am = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
 
       // FM Signal
-      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + ((Beta) * Math.sin(2 * Math.PI * fmFm * x)))));
+      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + ((fmDev/fmFC) * Math.sin(2 * Math.PI * fmFm * x)))));
 
       // DSB-SC
       const dsbsc = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
@@ -118,6 +117,7 @@
 
 </body>
 </html>
+
 
 
 
