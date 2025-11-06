@@ -1,301 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analog Modulation Visualizer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        /* Custom styles for a better look */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .chart-container {
-            position: relative;
-            height: 250px;
-            width: 100%;
-        }
-        .btn-active {
-            background-color: #4f46e5;
-            color: white;
-        }
-        /* Style for number input fields */
-        input[type="number"] {
-            background-color: #374151;
-            border: 1px solid #4b5563;
-            color: #e5e7eb;
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            width: 100%;
-            transition: border-color 0.2s;
-        }
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analog Modulation Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-900 text-gray-200 antialiased">
 
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl font-bold text-indigo-400">Analog Modulation Techniques Visualizer</h1>
-            <p class="text-lg text-gray-400 mt-2">Select a modulation type and adjust the parameters.</p>
-        </header>
+<body class="bg-gray-900 text-gray-100 font-sans">
 
-        <!-- Main Content: Controls + Plots -->
-        <div class="flex flex-col lg:flex-row gap-8">
-            
-            <!-- Controls Panel -->
-            <div class="lg:w-1/4 bg-gray-800 p-6 rounded-2xl shadow-lg">
-                <h2 class="text-2xl font-semibold mb-6 border-b border-gray-700 pb-3">Controls</h2>
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-3xl md:text-4xl font-bold text-center text-indigo-400 mb-6">
+      Analog Modulation Visualizer
+    </h1>
+    <p class="text-center text-gray-400 mb-10">
+      Experiment with AM, FM, DSB-SC, and SSB-SC waveforms interactively
+    </p>
 
-                <!-- Modulation Type Selector -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Modulation Type</label>
-                    <div class="grid grid-cols-2 gap-2" id="modulation-selector">
-                        <button data-mod="AM" class="mod-btn w-full py-2 px-4 rounded-lg shadow-sm transition-colors duration-200 bg-gray-700 hover:bg-indigo-500 btn-active">AM</button>
-                        <button data-mod="FM" class="mod-btn w-full py-2 px-4 rounded-lg shadow-sm transition-colors duration-200 bg-gray-700 hover:bg-indigo-500">FM</button>
-                        <button data-mod="DSB-SC" class="mod-btn w-full py-2 px-4 rounded-lg shadow-sm transition-colors duration-200 bg-gray-700 hover:bg-indigo-500">DSB-SC</button>
-                        <button data-mod="SSB-SC" class="mod-btn w-full py-2 px-4 rounded-lg shadow-sm transition-colors duration-200 bg-gray-700 hover:bg-indigo-500">SSB-SC</button>
-                    </div>
-                </div>
+    <div class="grid md:grid-cols-4 gap-8">
+      <!-- Controls -->
+      <aside class="bg-gray-800 p-5 rounded-2xl shadow-lg md:col-span-1">
+        <h2 class="text-xl font-semibold border-b border-gray-700 pb-3 mb-5">Controls</h2>
 
-                <!-- Input Fields -->
-                <div id="input-controls" class="space-y-4">
-                    <div>
-                        <label for="fc-input" class="block text-sm font-medium text-gray-300 mb-1">Carrier Freq (f<sub>c</sub>)</label>
-                        <input type="number" id="fc-input" value="6170" min="1">
-                    </div>
-                    <div>
-                        <label for="fm-input" class="block text-sm font-medium text-gray-300 mb-1">Message Freq (f<sub>m</sub>)</label>
-                        <input type="number" id="fm-input" value="617" min="1">
-                    </div>
-                    <div>
-                        <label for="ac-input" class="block text-sm font-medium text-gray-300 mb-1">Carrier Amp (A<sub>c</sub>)</label>
-                        <input type="number" id="ac-input" value="13.8" min="0.1" step="0.1">
-                    </div>
-                    <div id="am-input-group">
-                        <label for="am-input" class="block text-sm font-medium text-gray-300 mb-1">Message Amp (A<sub>m</sub>)</label>
-                        <input type="number" id="am-input" value="6.9" min="0.1" step="0.1">
-                    </div>
-                    <div id="beta-input-group" class="hidden">
-                        <label for="beta-input" class="block text-sm font-medium text-gray-300 mb-1">FM Index (β)</label>
-                        <input type="number" id="beta-input" value="5.65" min="0.1" step="0.1">
-                    </div>
+        <label class="block mb-2 font-medium">Modulation Type</label>
+        <select id="modSelect" class="w-full mb-4 p-2 bg-gray-700 rounded text-gray-200">
+          <option value="AM">Amplitude Modulation (AM)</option>
+          <option value="FM">Frequency Modulation (FM)</option>
+          <option value="DSB-SC">DSB-SC</option>
+          <option value="SSB-SC">SSB-SC</option>
+        </select>
 
-                    <div id="formula-display" class="pt-4 text-sm text-gray-400">
-                        <!-- Formula will be populated by JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Plots Section -->
-            <div class="lg:w-3/4 flex-grow">
-                <div class="space-y-8">
-                    <!-- Message Signal Plot -->
-                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg" id="message-plot-container">
-                        <h3 class="text-xl font-semibold mb-4">Message Signal</h3>
-                        <div class="chart-container">
-                            <canvas id="message-chart"></canvas>
-                        </div>
-                    </div>
-                    <!-- Carrier Signal Plot -->
-                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg" id="carrier-plot-container">
-                        <h3 class="text-xl font-semibold mb-4">Carrier Signal</h3>
-                        <div class="chart-container">
-                            <canvas id="carrier-chart"></canvas>
-                        </div>
-                    </div>
-                    <!-- Modulated Signal Plot -->
-                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg" id="modulated-plot-container">
-                        <h3 class="text-xl font-semibold mb-4">Modulated Signal</h3>
-                        <div class="chart-container">
-                            <canvas id="modulated-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm">Carrier Frequency (fc)</label>
+            <input id="fc" type="number" value="2000" class="w-full p-2 bg-gray-700 rounded">
+          </div>
+          <div>
+            <label class="block text-sm">Message Frequency (fm)</label>
+            <input id="fm" type="number" value="200" class="w-full p-2 bg-gray-700 rounded">
+          </div>
+          <div>
+            <label class="block text-sm">Carrier Amplitude (Ac)</label>
+            <input id="ac" type="number" value="1" step="0.1" class="w-full p-2 bg-gray-700 rounded">
+          </div>
+          <div id="amDiv">
+            <label class="block text-sm">Message Amplitude (Am)</label>
+            <input id="am" type="number" value="0.5" step="0.1" class="w-full p-2 bg-gray-700 rounded">
+          </div>
+          <div id="betaDiv" class="hidden">
+            <label class="block text-sm">Modulation Index (β)</label>
+            <input id="beta" type="number" value="5" step="0.1" class="w-full p-2 bg-gray-700 rounded">
+          </div>
         </div>
+
+        <div id="formula" class="text-gray-400 mt-6 text-sm border-t border-gray-700 pt-3"></div>
+      </aside>
+
+      <!-- Charts -->
+      <section class="md:col-span-3 space-y-8">
+        <div class="bg-gray-800 p-5 rounded-2xl shadow-lg">
+          <h3 class="text-lg font-semibold mb-3">Message Signal</h3>
+          <canvas id="msgChart" height="150"></canvas>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-2xl shadow-lg">
+          <h3 class="text-lg font-semibold mb-3">Carrier Signal</h3>
+          <canvas id="carChart" height="150"></canvas>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-2xl shadow-lg">
+          <h3 class="text-lg font-semibold mb-3">Modulated Signal</h3>
+          <canvas id="modChart" height="150"></canvas>
+        </div>
+      </section>
     </div>
+  </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Element References ---
-            const modulationSelector = document.getElementById('modulation-selector');
-            const formulaDisplay = document.getElementById('formula-display');
-            
-            // Input field elements
-            const fcInput = document.getElementById('fc-input');
-            const fmInput = document.getElementById('fm-input');
-            const acInput = document.getElementById('ac-input');
-            const amInput = document.getElementById('am-input');
-            const betaInput = document.getElementById('beta-input');
-            const amInputGroup = document.getElementById('am-input-group');
-            const betaInputGroup = document.getElementById('beta-input-group');
-            
-            const inputs = [fcInput, fmInput, acInput, amInput, betaInput];
+  <script>
+    // Chart.js Setup
+    Chart.defaults.color = "#d1d5db";
+    Chart.defaults.font.family = "Inter, sans-serif";
 
-            // --- State and Configuration ---
-            let activeModulation = 'AM'; // Default to AM
-            let charts = {};
-            const chartConfigs = {
-                message: { id: 'message-chart', label: 'Message Signal m(t)', color: '#34d399' },
-                carrier: { id: 'carrier-chart', label: 'Carrier Signal c(t)', color: '#fbbf24' },
-                modulated: { id: 'modulated-chart', label: 'Modulated Signal s(t)', color: '#818cf8' },
-            };
-            
-            // --- Chart.js Global Options ---
-            Chart.defaults.color = '#9ca3af';
-            Chart.defaults.borderColor = '#4b5563';
-            Chart.defaults.font.family = "'Inter', 'sans-serif'";
+    const msgChart = new Chart(document.getElementById("msgChart"), config());
+    const carChart = new Chart(document.getElementById("carChart"), config());
+    const modChart = new Chart(document.getElementById("modChart"), config());
 
-            // --- Functions ---
-            
-            // Get all current values from input fields
-            const getInputs = () => {
-                return {
-                    fc: parseFloat(fcInput.value) || 6170,
-                    fm: parseFloat(fmInput.value) || 617,
-                    Ac: parseFloat(acInput.value) || 13.8,
-                    Am: parseFloat(amInput.value) || 6.9,
-                    beta: parseFloat(betaInput.value) || 5.65
-                };
-            };
-            
-            const displayFormula = (modulationType) => {
-                let formulaHTML = '';
-                switch (modulationType) {
-                    case 'AM':
-                        formulaHTML = <p class="mt-4 pt-2 border-t border-gray-700"><strong>Formula:</strong><br>s(t) = [A<sub>c</sub> + m(t)] &middot; cos(2πf<sub>c</sub>t)</p>;
-                        break;
-                    case 'FM':
-                        formulaHTML = <p class="mt-4 pt-2 border-t border-gray-700"><strong>Formula:</strong><br>s(t) = A<sub>c</sub>cos[2πf<sub>c</sub>t + βsin(2πf<sub>m</sub>t)]</p>;
-                        break;
-                    case 'DSB-SC':
-                        formulaHTML = <p class="mt-4 pt-2 border-t border-gray-700"><strong>Formula:</strong><br>s(t) = m(t) &middot; cos(2πf<sub>c</sub>t)</p>;
-                        break;
-                    case 'SSB-SC':
-                        formulaHTML = <p class="mt-4 pt-2 border-t border-gray-700"><strong>Formula (LSB):</strong><br>s(t) = m(t)cos(2πf<sub>c</sub>t) - m̂(t)sin(2πf<sub>c</sub>t)</p>;
-                        break;
-                }
-                formulaDisplay.innerHTML = formulaHTML;
-            };
+    function config() {
+      return {
+        type: "line",
+        data: { labels: [], datasets: [{ data: [], borderColor: "#60a5fa", borderWidth: 2, pointRadius: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: "Time (s)" } },
+            y: { title: { display: true, text: "Amplitude" } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      };
+    }
 
-            const createChart = (config) => {
-                const ctx = document.getElementById(config.id).getContext('2d');
-                charts[config.id] = new Chart(ctx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [{ label: config.label, data: [], borderColor: config.color, backgroundColor: config.color + '33', borderWidth: 2, pointRadius: 0, tension: 0.1 }] },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        scales: {
-                            x: { title: { display: true, text: 'Time (s)', color: '#d1d5db' } },
-                            y: { title: { display: true, text: 'Amplitude', color: '#d1d5db' }, min: -2, max: 2, beginAtZero: false }
-                        },
-                        plugins: { legend: { labels: { color: '#d1d5db' } } }
-                    }
-                });
-            };
-            
-            const generateWaveforms = () => {
-                if (!activeModulation) return;
+    // Input elements
+    const modSelect = document.getElementById("modSelect");
+    const fc = document.getElementById("fc");
+    const fm = document.getElementById("fm");
+    const ac = document.getElementById("ac");
+    const am = document.getElementById("am");
+    const beta = document.getElementById("beta");
+    const amDiv = document.getElementById("amDiv");
+    const betaDiv = document.getElementById("betaDiv");
+    const formula = document.getElementById("formula");
 
-                const { fc, fm, Ac, Am, beta } = getInputs();
+    // Generate Signals
+    function updateSignals() {
+      const fcVal = parseFloat(fc.value);
+      const fmVal = parseFloat(fm.value);
+      const Ac = parseFloat(ac.value);
+      const Am = parseFloat(am.value);
+      const β = parseFloat(beta.value);
+      const mod = modSelect.value;
 
-                const samplingRate = fc * 10; // fs
-                const duration = 2 / fm;
-                const numPoints = Math.floor(duration * samplingRate);
-                const t = Array.from({ length: numPoints }, (_, i) => i / samplingRate);
+      const fs = fcVal * 20; // sampling rate
+      const t = Array.from({ length: 500 }, (_, i) => i / fs);
 
-                const messageSignal = t.map(time => Am * Math.cos(2 * Math.PI * fm * time));
-                const carrierSignal = t.map(time => Ac * Math.cos(2 * Math.PI * fc * time));
-                const normalizedCarrier = t.map(time => Math.cos(2 * Math.PI * fc * time));
-                
-                let modulatedSignal = [];
+      const msg = t.map(x => Am * Math.cos(2 * Math.PI * fmVal * x));
+      const car = t.map(x => Ac * Math.cos(2 * Math.PI * fcVal * x));
+      let modSig = [];
 
-                switch (activeModulation) {
-                    case 'AM':
-                        modulatedSignal = t.map((time, i) => (Ac + messageSignal[i]) * normalizedCarrier[i]);
-                        break;
-                    case 'FM':
-                        const integralMessage = t.map(time => Math.sin(2 * Math.PI * fm * time));
-                        modulatedSignal = t.map((time, i) => Ac * Math.cos(2 * Math.PI * fc * time + beta * integralMessage[i]));
-                        break;
-                    case 'DSB-SC':
-                        modulatedSignal = t.map((time, i) => messageSignal[i] * normalizedCarrier[i]);
-                        break;
-                    case 'SSB-SC':
-                        const messageHilbert = t.map(time => Am * Math.sin(2 * Math.PI * fm * time));
-                        const carrierSine = t.map(time => Math.sin(2 * Math.PI * fc * time));
-                        modulatedSignal = t.map((time, i) => messageSignal[i] * normalizedCarrier[i] - messageHilbert[i] * carrierSine[i]);
-                        break;
-                }
-                
-                // Calculate separate Y-axis limits for each chart
-                const yLimitMessage = Math.ceil(Am * 1.1) || 2;
-                const yLimitCarrier = Math.ceil(Ac * 1.1) || 2;
-                const yLimitModulated = Math.ceil(Math.max(...modulatedSignal.map(Math.abs)) * 1.1) || 2;
-
-
-                updateChart(charts[chartConfigs.message.id], t, messageSignal, yLimitMessage);
-                updateChart(charts[chartConfigs.carrier.id], t, carrierSignal, yLimitCarrier);
-                updateChart(charts[chartConfigs.modulated.id], t, modulatedSignal, yLimitModulated);
-            };
-
-            const updateChart = (chart, labels, data, yLimit) => {
-                if (!chart) return;
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.options.scales.y.min = -yLimit;
-                chart.options.scales.y.max = yLimit;
-                chart.update();
-            };
-            
-            const handleModulationSwitch = (e) => {
-                const selectedBtn = e.target.closest('.mod-btn');
-                if (!selectedBtn) return;
-                
-                activeModulation = selectedBtn.dataset.mod;
-
-                // Update button styles
-                document.querySelectorAll('.mod-btn').forEach(btn => btn.classList.remove('btn-active'));
-                selectedBtn.classList.add('btn-active');
-                
-                // Show/hide relevant inputs
-                if (activeModulation === 'FM') {
-                    amInputGroup.classList.add('hidden');
-                    betaInputGroup.classList.remove('hidden');
-                } else {
-                    amInputGroup.classList.remove('hidden');
-                    betaInputGroup.classList.add('hidden');
-                }
-                
-                displayFormula(activeModulation);
-                generateWaveforms();
-            };
-
-            // --- Event Listeners & Initial Setup ---
-            modulationSelector.addEventListener('click', handleModulationSwitch);
-            
-            // Add listeners to all inputs for real-time updates
-            inputs.forEach(input => {
-                input.addEventListener('input', () => {
-                    // Re-calculate and re-draw everything on any input change
-                    if(activeModulation) {
-                        generateWaveforms();
-                    }
-                });
-            });
-            
-            Object.values(chartConfigs).forEach(createChart);
-            
-            // --- Initial Load ---
-            displayFormula('AM'); // Display AM formula by default
-            generateWaveforms();  // Generate initial AM waveforms
-        });
-    </script>
-</body>
-</html>
+      switch (mod) {
+        case "AM":
+          modSig = t.map((x,
