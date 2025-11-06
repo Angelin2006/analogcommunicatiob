@@ -16,26 +16,32 @@
     <div>
       <h2 class="text-lg font-semibold mb-2">AM Parameters</h2>
       <label class="block mb-2">Carrier Frequency (Hz):</label>
-      <input id="amFc" type="number" value="1000" class="w-full border p-2 rounded">
+      <input id="amFc" type="number" value="5770" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-      <input id="amFm" type="number" value="100" class="w-full border p-2 rounded">
+      <input id="amFm" type="number" value="577" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Carrier Amplitude:</label>
-      <input id="amAc" type="number" value="1" class="w-full border p-2 rounded">
+      <input id="amAc" type="number" value="9.6" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Message Amplitude:</label>
-      <input id="amAm" type="number" value="0.5" class="w-full border p-2 rounded">
+      <input id="amAm" type="number" value="4.8" class="w-full border p-2 rounded">
     </div>
 
-    <div>
-      <h2 class="text-lg font-semibold mb-2">FM Parameters</h2>
-      <label class="block mb-2">Carrier Frequency (Hz):</label>
-      <input id="fmFc" type="number" value="1000" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
-      <input id="fmFm" type="number" value="100" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Frequency Deviation:</label>
-      <input id="fmDev" type="number" value="200" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Amplitude:</label>
-      <input id="fmAmp" type="number" value="1" class="w-full border p-2 rounded">
-    </div>
+   <div>
+  <h2 class="text-lg font-semibold mb-2">FM Parameters</h2>
+  <label class="block mb-2">Carrier Frequency (Hz):</label>
+  <input id="fmFc" type="number" value="5770" class="w-full border p-2 rounded">
+  
+  <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
+  <input id="fmFm" type="number" value="577" class="w-full border p-2 rounded">
+  
+  <label class="block mb-2 mt-3">Frequency Deviation:</label>
+  <input id="fmDev" type="number" value="20" class="w-full border p-2 rounded">
+  
+  <label class="block mb-2 mt-3">Amplitude:</label>
+  <input id="fmAmp" type="number" value="9.6" class="w-full border p-2 rounded">
+  
+  <label class="block mb-2 mt-3">Modulation Index (Beta):</label>
+  <input id="fmBeta" type="number" value="2.083" readonly class="w-full border p-2 rounded bg-gray-100"> 
+</div>
   </div>
 
   <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">Generate</button>
@@ -112,4 +118,5 @@
 
 </body>
 </html>
+
 
