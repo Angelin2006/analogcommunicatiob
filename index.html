@@ -78,7 +78,7 @@
       const am = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
 
       // FM Signal
-      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + (fmDev / fmFm) * Math.sin(2 * Math.PI * fmFm * x))));
+      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + ((fmDev / fmFm) * Math.sin(2 * Math.PI * fmFm * x)))));
 
       // DSB-SC
       const dsbsc = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
@@ -118,6 +118,7 @@
 
 </body>
 </html>
+
 
 
 
