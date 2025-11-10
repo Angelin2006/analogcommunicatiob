@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analog Modulation Visualizer (Two Cycles)</title>
+  <title>Analog Modulation Visualizer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -45,12 +45,11 @@
     Generate
   </button>
 
-  <!-- Modulation Type Buttons -->
-  <div id="modButtons" class="hidden mb-6 space-x-4">
-    <button onclick="showPlot('AM')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold">Show AM</button>
-    <button onclick="showPlot('FM')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Show FM</button>
-    <button onclick="showPlot('DSBSC')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">Show DSB-SC</button>
-    <button onclick="showPlot('SSBSC')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">Show SSB-SC</button>
+  <!-- Signal Type Buttons -->
+  <div id="signalButtons" class="hidden mb-6 flex flex-wrap justify-center gap-3">
+    <button onclick="showSignal('message')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold">Message Signal</button>
+    <button onclick="showSignal('carrier')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Carrier Signal</button>
+    <button onclick="showSignal('am')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold">AM Signal</button>
   </div>
 
   <!-- Chart Section -->
@@ -60,20 +59,13 @@
 
   <script>
     let chart;
-    let t, message, carrierAM, carrierFM, amSignal, fmSignal, dsbscSignal, ssbscSignal;
+    let t, message, carrierAM, amSignal;
 
-    // Step 1: Generate signals (no chart shown yet)
     function generateSignals() {
       const amFc = parseFloat(document.getElementById('amFc').value);
       const amFm = parseFloat(document.getElementById('amFm').value);
       const amAc = parseFloat(document.getElementById('amAc').value);
       const amAm = parseFloat(document.getElementById('amAm').value);
-
-      const fmFc = parseFloat(document.getElementById('fmFc').value);
-      const fmFm = parseFloat(document.getElementById('fmFm').value);
-      const fmDev = parseFloat(document.getElementById('fmDev').value);
-      const fmAmp = parseFloat(document.getElementById('fmAmp').value);
-      const fmBeta = parseFloat(document.getElementById('fmBeta').value);
 
       // Time axis for two message cycles
       t = [];
@@ -81,62 +73,37 @@
       const totalTime = 2 / amFm;
       for (let x = 0; x <= totalTime; x += step) t.push(x);
 
-      // Message and carrier
-      message = t.map(x => Math.sin(2 * Math.PI * amFm * x));
+      // Generate signals
+      message = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x));
       carrierAM = t.map(x => amAc * Math.sin(2 * Math.PI * amFc * x));
-      carrierFM = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x));
-
-      // Modulated signals
       amSignal = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
-      fmSignal = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x + fmBeta * Math.sin(2 * Math.PI * fmFm * x)));
-      dsbscSignal = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
-      ssbscSignal = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.cos(2 * Math.PI * amFc * x)
-        - amAm * Math.cos(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
 
-      // Show modulation buttons
-      document.getElementById("modButtons").classList.remove("hidden");
+      // Show signal buttons
+      document.getElementById("signalButtons").classList.remove("hidden");
 
-      // Hide chart area initially (blank after generating)
+      // Hide chart until a signal is clicked
       document.getElementById("chartContainer").classList.add("hidden");
     }
 
-    // Step 2: Show selected modulation graph
-    function showPlot(type) {
+    function showSignal(type) {
       const ctx = document.getElementById('waveCanvas').getContext('2d');
       if (chart) chart.destroy();
 
-      let dataSets;
-      if (type === "AM") {
-        dataSets = [
-          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
-          { label: "Carrier Signal (AM)", data: carrierAM, borderColor: "blue", borderWidth: 1 },
-          { label: "AM Signal", data: amSignal, borderColor: "red", borderWidth: 1 }
-        ];
-      } else if (type === "FM") {
-        dataSets = [
-          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
-          { label: "Carrier Signal (FM)", data: carrierFM, borderColor: "blue", borderWidth: 1 },
-          { label: "FM Signal", data: fmSignal, borderColor: "red", borderWidth: 1 }
-        ];
-      } else if (type === "DSBSC") {
-        dataSets = [
-          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
-          { label: "Carrier Signal", data: carrierAM, borderColor: "blue", borderWidth: 1 },
-          { label: "DSB-SC Signal", data: dsbscSignal, borderColor: "green", borderWidth: 1 }
-        ];
-      } else if (type === "SSBSC") {
-        dataSets = [
-          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
-          { label: "Carrier Signal", data: carrierAM, borderColor: "blue", borderWidth: 1 },
-          { label: "SSB-SC Signal", data: ssbscSignal, borderColor: "orange", borderWidth: 1 }
-        ];
+      let dataset;
+
+      if (type === 'message') {
+        dataset = [{ label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 }];
+      } else if (type === 'carrier') {
+        dataset = [{ label: "Carrier Signal", data: carrierAM, borderColor: "blue", borderWidth: 1 }];
+      } else if (type === 'am') {
+        dataset = [{ label: "AM Signal", data: amSignal, borderColor: "red", borderWidth: 1 }];
       }
 
       chart = new Chart(ctx, {
         type: "line",
         data: {
           labels: t.map(x => x.toFixed(4)),
-          datasets: dataSets
+          datasets: dataset
         },
         options: {
           responsive: true,
@@ -149,9 +116,9 @@
         }
       });
 
-      // Show the chart container only when a type is clicked
       document.getElementById("chartContainer").classList.remove("hidden");
     }
   </script>
 </body>
 </html>
+
