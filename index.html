@@ -1,147 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Analog Modulation Visualizer</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Analog Modulation Visualizer — 2 Cycles, 3 stacked plots</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* make canvases visually similar to your reference */
+    .plot-card { background:white; border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+    canvas { width:100% !important; }
+  </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6">
-  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-4xl">
-    <h1 class="text-2xl font-bold mb-4 text-center">Analog Modulation Visualizer</h1>
+<body class="bg-gray-100 min-h-screen flex items-start justify-center p-8">
+  <div class="w-full max-w-5xl">
+    <div class="plot-card mb-6">
+      <h1 class="text-2xl font-bold text-center mb-4">Analog Modulation Visualizer (2 cycles)</h1>
 
-    <!-- Parameter Inputs -->
-    <div class="grid grid-cols-2 gap-4 mb-6">
-      <div>
-        <label class="block mb-1 font-medium">Message Frequency (Hz)</label>
-        <input id="fm" type="number" value="5" class="w-full border rounded p-2" />
+      <!-- Parameter inputs -->
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium">Message frequency f<sub>m</sub> (Hz)</label>
+          <input id="fm" type="number" value="387" class="mt-1 w-full border rounded p-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Carrier frequency f<sub>c</sub> (Hz)</label>
+          <input id="fc" type="number" value="3870" class="mt-1 w-full border rounded p-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Message amplitude A<sub>m</sub></label>
+          <input id="Am" type="number" value="4.7" class="mt-1 w-full border rounded p-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Carrier amplitude A<sub>c</sub></label>
+          <input id="Ac" type="number" value="9.4" class="mt-1 w-full border rounded p-2" />
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium">FM modulation index β</label>
+          <input id="beta" type="number" value="2.55" class="mt-1 w-full border rounded p-2" />
+        </div>
       </div>
-      <div>
-        <label class="block mb-1 font-medium">Carrier Frequency (Hz)</label>
-        <input id="fc" type="number" value="50" class="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label class="block mb-1 font-medium">Amplitude of Message</label>
-        <input id="Am" type="number" value="1" class="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label class="block mb-1 font-medium">Amplitude of Carrier</label>
-        <input id="Ac" type="number" value="1" class="w-full border rounded p-2" />
-      </div>
-      <div class="col-span-2">
-        <label class="block mb-1 font-medium">FM Modulation Index</label>
-        <input id="beta" type="number" value="5" class="w-full border rounded p-2" />
+
+      <!-- Controls -->
+      <div class="flex justify-center gap-3 mb-2">
+        <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Generate</button>
+        <button id="showAM" class="bg-red-500 text-white px-4 py-2 rounded">Show AM</button>
+        <button id="showFM" class="bg-green-600 text-white px-4 py-2 rounded">Show FM</button>
+        <button id="showDSB" class="bg-purple-600 text-white px-4 py-2 rounded">Show DSB-SC</button>
+        <button id="showSSB" class="bg-orange-500 text-white px-4 py-2 rounded">Show SSB-SC</button>
       </div>
     </div>
 
-    <!-- Control Buttons -->
-    <div class="flex justify-center gap-3 mb-6">
-      <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Generate</button>
-      <button id="showAM" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">Show AM</button>
-      <button id="showFM" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">Show FM</button>
-      <button id="showDSB" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">Show DSB-SC</button>
-      <button id="showSSB" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">Show SSB-SC</button>
-    </div>
-
-    <!-- Canvas Container -->
-    <div class="space-y-6">
-      <canvas id="msgChart" height="120"></canvas>
-      <canvas id="carrierChart" height="120"></canvas>
-      <canvas id="modChart" height="120"></canvas>
+    <!-- stacked plot area -->
+    <div class="plot-card space-y-6">
+      <canvas id="msgCanvas" height="120"></canvas>
+      <canvas id="carrierCanvas" height="120"></canvas>
+      <canvas id="modCanvas" height="140"></canvas>
     </div>
   </div>
 
-  <script>
-    let t = [], msg = [], carrier = [], am = [], fm = [], dsb = [], ssb = [];
-    const fs = 1000; // Sampling frequency
-    let dataGenerated = false;
-    let currentShown = "";
+<script>
+/* Behavior:
+  - Click Generate: compute 2 cycles of message and related signals (high sampling)
+  - Click Show AM/FM/DSB/SSB: draw three stacked charts
+  - Click same button again: clear charts
+*/
 
-    const msgCtx = document.getElementById("msgChart").getContext("2d");
-    const carrierCtx = document.getElementById("carrierChart").getContext("2d");
-    const modCtx = document.getElementById("modChart").getContext("2d");
+let t = [], msg = [], carrier = [], am = [], fmSig = [], dsb = [], ssb = [];
+let generated = false, current = "";
+const fs = 200000; // high sampling for smooth curves
 
-    let msgChart, carrierChart, modChart;
+// chart instances
+let msgChart = null, carrierChart = null, modChart = null;
 
-    function clearCharts() {
-      [msgChart, carrierChart, modChart].forEach(chart => {
-        if (chart) chart.destroy();
-      });
-    }
+function clearAllCharts(){
+  [msgChart, carrierChart, modChart].forEach(c => { if(c) c.destroy(); });
+  msgChart = carrierChart = modChart = null;
+  current = "";
+}
 
-    function generateSignals() {
-      const fmVal = parseFloat(document.getElementById("fm").value);
-      const fcVal = parseFloat(document.getElementById("fc").value);
-      const Am = parseFloat(document.getElementById("Am").value);
-      const Ac = parseFloat(document.getElementById("Ac").value);
-      const beta = parseFloat(document.getElementById("beta").value);
+function generate() {
+  const fmVal = parseFloat(document.getElementById('fm').value);
+  const fcVal = parseFloat(document.getElementById('fc').value);
+  const Am = parseFloat(document.getElementById('Am').value);
+  const Ac = parseFloat(document.getElementById('Ac').value);
+  const beta = parseFloat(document.getElementById('beta').value);
 
-      t = Array.from({ length: fs }, (_, i) => i / fs);
-      msg = t.map(tt => Am * Math.sin(2 * Math.PI * fmVal * tt));
-      carrier = t.map(tt => Ac * Math.sin(2 * Math.PI * fcVal * tt));
-      am = t.map(tt => (Ac * (1 + (Am / Ac) * Math.sin(2 * Math.PI * fmVal * tt))) * Math.sin(2 * Math.PI * fcVal * tt));
-      fm = t.map(tt => Ac * Math.sin(2 * Math.PI * fcVal * tt + beta * Math.sin(2 * Math.PI * fmVal * tt)));
-      dsb = t.map(tt => Am * Math.sin(2 * Math.PI * fmVal * tt) * Math.sin(2 * Math.PI * fcVal * tt));
-      ssb = t.map(tt => Am * Math.sin(2 * Math.PI * fmVal * tt) * Math.cos(2 * Math.PI * fcVal * tt));
+  if(!(fmVal>0 && fcVal>0)) { alert('Set positive fm and fc'); return; }
 
-      dataGenerated = true;
-      alert("Signals Generated!");
-    }
+  // exactly two cycles of message
+  const Tm = 1 / fmVal;
+  const duration = 2 * Tm;
+  const N = Math.max(2000, Math.floor(duration * fs)); // ensure at least ~2000 samples
+  t = Array.from({length: N}, (_, i) => i * (duration / (N-1)));
 
-    function showSignal(type) {
-      if (!dataGenerated) {
-        alert("Please click 'Generate' first!");
-        return;
-      }
+  // use cosine (starts at peak) to match reference look
+  msg = t.map(tt => Am * Math.cos(2*Math.PI*fmVal*tt));
+  carrier = t.map(tt => Ac * Math.cos(2*Math.PI*fcVal*tt));
+  am = t.map(tt => (Ac * (1 + (Am/Ac) * Math.cos(2*Math.PI*fmVal*tt))) * Math.cos(2*Math.PI*fcVal*tt));
+  fmSig = t.map(tt => Ac * Math.cos(2*Math.PI*fcVal*tt + beta * Math.sin(2*Math.PI*fmVal*tt)));
+  dsb = t.map(tt => Am * Math.cos(2*Math.PI*fmVal*tt) * Math.cos(2*Math.PI*fcVal*tt));
+  // simple SSB approx (not exact Hilbert, but visually similar)
+  ssb = t.map(tt => Am * Math.cos(2*Math.PI*fmVal*tt) * Math.sin(2*Math.PI*fcVal*tt));
 
-      // toggle blank
-      if (currentShown === type) {
-        clearCharts();
-        currentShown = "";
-        return;
-      }
+  generated = true;
+  clearAllCharts(); // keep blank until user presses Show
+  alert('Generated two-cycle signals. Click any "Show" button to view.');
+}
 
-      clearCharts();
+function plotThree(type) {
+  if(!generated){ alert('Click Generate first'); return; }
 
-      msgChart = new Chart(msgCtx, {
-        type: "line",
-        data: { labels: t, datasets: [{ label: "Message Signal", data: msg, borderColor: "black", borderWidth: 1, pointRadius: 0 }] },
-        options: { plugins: { legend: { display: true } }, scales: { x: { display: false } } }
-      });
+  // toggle: clicking same button clears view
+  if(current === type){ clearAllCharts(); return; }
 
-      carrierChart = new Chart(carrierCtx, {
-        type: "line",
-        data: { labels: t, datasets: [{ label: "Carrier Signal", data: carrier, borderColor: "blue", borderWidth: 1, pointRadius: 0 }] },
-        options: { plugins: { legend: { display: true } }, scales: { x: { display: false } } }
-      });
+  clearAllCharts();
 
-      let modData = [];
-      let color = "red";
-      let label = "";
+  const labelStyle = { display: true, font: { size: 12 } };
+  const baseOptions = (xShow=false) => ({
+    responsive:true, animation:false,
+    plugins:{ legend:{ display:true, labels: { boxWidth:12 } } },
+    scales:{
+      x:{ display: xShow, title:{display:xShow, text:'Time (s)'}, ticks:{maxTicksLimit:6} },
+      y:{ display:true, title:{display:true, text:'Amplitude'} }
+    },
+    elements:{ point:{ radius:0 }, line:{ tension:0 } }
+  });
 
-      switch (type) {
-        case "AM": modData = am; label = "AM Signal"; break;
-        case "FM": modData = fm; label = "FM Signal"; break;
-        case "DSB": modData = dsb; label = "DSB-SC Signal"; break;
-        case "SSB": modData = ssb; label = "SSB-SC Signal"; break;
-      }
+  // message
+  msgChart = new Chart(document.getElementById('msgCanvas').getContext('2d'), {
+    type:'line',
+    data:{ labels:t, datasets:[{ label:'Message Signal', data:msg, borderColor:'black', borderWidth:1 }]},
+    options: baseOptions(false)
+  });
 
-      modChart = new Chart(modCtx, {
-        type: "line",
-        data: { labels: t, datasets: [{ label, data: modData, borderColor: color, borderWidth: 1, pointRadius: 0 }] },
-        options: { plugins: { legend: { display: true } }, scales: { x: { display: true } } }
-      });
+  // carrier
+  carrierChart = new Chart(document.getElementById('carrierCanvas').getContext('2d'), {
+    type:'line',
+    data:{ labels:t, datasets:[{ label:'Carrier Signal', data:carrier, borderColor:'blue', borderWidth:1 }]},
+    options: baseOptions(false)
+  });
 
-      currentShown = type;
-    }
+  // modulation bottom panel
+  let dataset = [], color='red', lab='';
+  if(type==='AM'){ dataset = am; color='red'; lab='AM Signal'; }
+  else if(type==='FM'){ dataset = fmSig; color='green'; lab='FM Signal'; }
+  else if(type==='DSB'){ dataset = dsb; color='purple'; lab='DSB-SC Signal'; }
+  else if(type==='SSB'){ dataset = ssb; color='orange'; lab='SSB-SC Signal'; }
 
-    document.getElementById("generateBtn").addEventListener("click", generateSignals);
-    document.getElementById("showAM").addEventListener("click", () => showSignal("AM"));
-    document.getElementById("showFM").addEventListener("click", () => showSignal("FM"));
-    document.getElementById("showDSB").addEventListener("click", () => showSignal("DSB"));
-    document.getElementById("showSSB").addEventListener("click", () => showSignal("SSB"));
-  </script>
+  modChart = new Chart(document.getElementById('modCanvas').getContext('2d'), {
+    type:'line',
+    data:{ labels:t, datasets:[{ label: lab, data: dataset, borderColor: color, borderWidth:1 }]},
+    options: baseOptions(true)
+  });
+
+  current = type;
+}
+
+// attach events
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('showAM').addEventListener('click', ()=>plotThree('AM'));
+document.getElementById('showFM').addEventListener('click', ()=>plotThree('FM'));
+document.getElementById('showDSB').addEventListener('click', ()=>plotThree('DSB'));
+document.getElementById('showSSB').addEventListener('click', ()=>plotThree('SSB'));
+</script>
 </body>
 </html>
-
