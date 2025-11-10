@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analog Modulation Visualizer</title>
+  <title>Analog Modulation Visualizer (Two Cycles)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -31,23 +31,38 @@
       <input id="fmFc" type="number" value="1000" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Message Frequency (Hz):</label>
       <input id="fmFm" type="number" value="100" class="w-full border p-2 rounded">
-      <label class="block mb-2 mt-3">Frequency Deviation:</label>
+      <label class="block mb-2 mt-3">Frequency Deviation (Δf):</label>
       <input id="fmDev" type="number" value="200" class="w-full border p-2 rounded">
       <label class="block mb-2 mt-3">Amplitude:</label>
       <input id="fmAmp" type="number" value="1" class="w-full border p-2 rounded">
+      <label class="block mb-2 mt-3">Modulation Index (β):</label>
+      <input id="fmBeta" type="number" value="2" class="w-full border p-2 rounded">
     </div>
   </div>
 
-  <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">Generate</button>
+  <!-- Generate Button -->
+  <button onclick="generateSignals()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-6">
+    Generate
+  </button>
 
-  <!-- Chart -->
-  <div class="w-full max-w-5xl bg-white p-4 rounded-2xl shadow">
-    <canvas id="waveCanvas" height="150"></canvas>
+  <!-- Modulation Type Buttons -->
+  <div id="modButtons" class="hidden mb-6 space-x-4">
+    <button onclick="showPlot('AM')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold">Show AM</button>
+    <button onclick="showPlot('FM')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Show FM</button>
+    <button onclick="showPlot('DSBSC')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">Show DSB-SC</button>
+    <button onclick="showPlot('SSBSC')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">Show SSB-SC</button>
+  </div>
+
+  <!-- Chart Section -->
+  <div id="chartContainer" class="w-full max-w-5xl bg-white p-4 rounded-2xl shadow hidden">
+    <canvas id="waveCanvas" height="250"></canvas>
   </div>
 
   <script>
     let chart;
+    let t, message, carrierAM, carrierFM, amSignal, fmSignal, dsbscSignal, ssbscSignal;
 
+    // Step 1: Generate signals (no chart shown yet)
     function generateSignals() {
       const amFc = parseFloat(document.getElementById('amFc').value);
       const amFm = parseFloat(document.getElementById('amFm').value);
@@ -58,58 +73,85 @@
       const fmFm = parseFloat(document.getElementById('fmFm').value);
       const fmDev = parseFloat(document.getElementById('fmDev').value);
       const fmAmp = parseFloat(document.getElementById('fmAmp').value);
+      const fmBeta = parseFloat(document.getElementById('fmBeta').value);
 
-      // Time axis for 2 cycles of lowest message frequency
-      const t = [];
-      const step = 1 / (amFc * 100);
+      // Time axis for two message cycles
+      t = [];
+      const step = 1 / (amFc * 200);
       const totalTime = 2 / amFm;
       for (let x = 0; x <= totalTime; x += step) t.push(x);
 
-      // Message signal
-      const m = t.map(x => Math.sin(2 * Math.PI * amFm * x));
+      // Message and carrier
+      message = t.map(x => Math.sin(2 * Math.PI * amFm * x));
+      carrierAM = t.map(x => amAc * Math.sin(2 * Math.PI * amFc * x));
+      carrierFM = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x));
 
-      // AM Signal
-      const am = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
+      // Modulated signals
+      amSignal = t.map(x => (amAc + amAm * Math.sin(2 * Math.PI * amFm * x)) * Math.sin(2 * Math.PI * amFc * x));
+      fmSignal = t.map(x => fmAmp * Math.sin(2 * Math.PI * fmFc * x + fmBeta * Math.sin(2 * Math.PI * fmFm * x)));
+      dsbscSignal = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
+      ssbscSignal = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.cos(2 * Math.PI * amFc * x)
+        - amAm * Math.cos(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
 
-      // FM Signal
-      const fm = t.map(x => fmAmp * Math.sin(2 * Math.PI * (fmFc * x + (fmDev / fmFm) * Math.sin(2 * Math.PI * fmFm * x))));
+      // Show modulation buttons
+      document.getElementById("modButtons").classList.remove("hidden");
 
-      // DSB-SC
-      const dsbsc = t.map(x => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
+      // Hide chart area initially (blank after generating)
+      document.getElementById("chartContainer").classList.add("hidden");
+    }
 
-      // SSB-SC (approximation using Hilbert transform concept)
-      const ssbsc = t.map((x, i) => amAm * Math.sin(2 * Math.PI * amFm * x) * Math.cos(2 * Math.PI * amFc * x) - amAm * Math.cos(2 * Math.PI * amFm * x) * Math.sin(2 * Math.PI * amFc * x));
-
-      // Plot
+    // Step 2: Show selected modulation graph
+    function showPlot(type) {
       const ctx = document.getElementById('waveCanvas').getContext('2d');
       if (chart) chart.destroy();
 
+      let dataSets;
+      if (type === "AM") {
+        dataSets = [
+          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
+          { label: "Carrier Signal (AM)", data: carrierAM, borderColor: "blue", borderWidth: 1 },
+          { label: "AM Signal", data: amSignal, borderColor: "red", borderWidth: 1 }
+        ];
+      } else if (type === "FM") {
+        dataSets = [
+          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
+          { label: "Carrier Signal (FM)", data: carrierFM, borderColor: "blue", borderWidth: 1 },
+          { label: "FM Signal", data: fmSignal, borderColor: "red", borderWidth: 1 }
+        ];
+      } else if (type === "DSBSC") {
+        dataSets = [
+          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
+          { label: "Carrier Signal", data: carrierAM, borderColor: "blue", borderWidth: 1 },
+          { label: "DSB-SC Signal", data: dsbscSignal, borderColor: "green", borderWidth: 1 }
+        ];
+      } else if (type === "SSBSC") {
+        dataSets = [
+          { label: "Message Signal", data: message, borderColor: "black", borderWidth: 1 },
+          { label: "Carrier Signal", data: carrierAM, borderColor: "blue", borderWidth: 1 },
+          { label: "SSB-SC Signal", data: ssbscSignal, borderColor: "orange", borderWidth: 1 }
+        ];
+      }
+
       chart = new Chart(ctx, {
-        type: 'line',
+        type: "line",
         data: {
           labels: t.map(x => x.toFixed(4)),
-          datasets: [
-            { label: 'AM', data: am, borderColor: 'red', borderWidth: 1, fill: false },
-            { label: 'FM', data: fm, borderColor: 'blue', borderWidth: 1, fill: false },
-            { label: 'DSB-SC', data: dsbsc, borderColor: 'green', borderWidth: 1, fill: false },
-            { label: 'SSB-SC', data: ssbsc, borderColor: 'orange', borderWidth: 1, fill: false }
-          ]
+          datasets: dataSets
         },
         options: {
           responsive: true,
           animation: false,
           scales: {
-            x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } },
-            y: { title: { display: true, text: 'Amplitude' } }
+            x: { title: { display: true, text: "Time (s)" }, ticks: { maxTicksLimit: 8 } },
+            y: { title: { display: true, text: "Amplitude" } }
           },
-          plugins: { legend: { position: 'top' } }
+          plugins: { legend: { position: "top" } }
         }
       });
+
+      // Show the chart container only when a type is clicked
+      document.getElementById("chartContainer").classList.remove("hidden");
     }
-
-    window.onload = generateSignals;
   </script>
-
 </body>
 </html>
-
