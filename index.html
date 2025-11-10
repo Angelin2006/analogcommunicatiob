@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Analog Modulation Visualizer</title>
+  <title>Analog Modulation Visualizer (Two Cycles)</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6">
   <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-4xl">
-    <h1 class="text-2xl font-bold mb-4 text-center">Analog Modulation Visualizer</h1>
+    <h1 class="text-2xl font-bold mb-4 text-center">Analog Modulation Visualizer (Two Cycles)</h1>
 
     <!-- Parameter Inputs -->
     <div class="grid grid-cols-2 gap-4 mb-6">
@@ -54,7 +54,7 @@
 
   <script>
     let t = [], msg = [], carrier = [], am = [], fm = [], dsb = [], ssb = [];
-    const fs = 1000; // Sampling frequency
+    const fs = 20000; // Higher sampling rate for smooth curves
     let dataGenerated = false;
     let currentShown = "";
 
@@ -77,7 +77,12 @@
       const Ac = parseFloat(document.getElementById("Ac").value);
       const beta = parseFloat(document.getElementById("beta").value);
 
-      t = Array.from({ length: fs }, (_, i) => i / fs);
+      // Two cycles of message signal only
+      const Tm = 1 / fmVal;
+      const duration = 2 * Tm; 
+      const N = Math.floor(duration * fs);
+
+      t = Array.from({ length: N }, (_, i) => i / fs);
       msg = t.map(tt => Am * Math.sin(2 * Math.PI * fmVal * tt));
       carrier = t.map(tt => Ac * Math.sin(2 * Math.PI * fcVal * tt));
       am = t.map(tt => (Ac * (1 + (Am / Ac) * Math.sin(2 * Math.PI * fmVal * tt))) * Math.sin(2 * Math.PI * fcVal * tt));
@@ -86,7 +91,7 @@
       ssb = t.map(tt => Am * Math.sin(2 * Math.PI * fmVal * tt) * Math.cos(2 * Math.PI * fcVal * tt));
 
       dataGenerated = true;
-      alert("Signals Generated!");
+      alert("Two-cycle signals generated!");
     }
 
     function showSignal(type) {
@@ -95,7 +100,7 @@
         return;
       }
 
-      // toggle blank
+      // Toggle blank screen
       if (currentShown === type) {
         clearCharts();
         currentShown = "";
@@ -117,8 +122,8 @@
       });
 
       let modData = [];
-      let color = "red";
       let label = "";
+      let color = "red";
 
       switch (type) {
         case "AM": modData = am; label = "AM Signal"; break;
@@ -144,4 +149,3 @@
   </script>
 </body>
 </html>
-
