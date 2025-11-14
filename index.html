@@ -57,12 +57,6 @@
   </div>
 
   <script>
-    /* Behavior:
-     * - Click Generate: compute 2 cycles of message and related signals (high sampling)
-     * - Click Show AM/FM/DSB/SSB: draw three stacked charts
-     * - Click same button again: clear charts
-     */
-
     let t = [], msg = [], carrier = [], am = [], fmSig = [], dsb = [], ssb = [];
     let generated = false, current = "";
     // High sampling rate for smooth curve visualization
@@ -78,6 +72,7 @@
     }
 
     function generate() {
+      // Get input values
       const fmVal = parseFloat(document.getElementById('fm').value);
       const fcVal = parseFloat(document.getElementById('fc').value);
       const Am = parseFloat(document.getElementById('Am').value);
@@ -86,13 +81,13 @@
 
       if(!(fmVal > 0 && fcVal > 0)) { alert('Set positive fm and fc'); return; }
 
-      // Calculate exactly two cycles of message signal duration
+      // Time array (2 cycles of message signal)
       const Tm = 1 / fmVal;
       const duration = 2 * Tm;
-      const N = Math.max(2000, Math.floor(duration * fs)); // ensure at least ~2000 samples
+      const N = Math.max(2000, Math.floor(duration * fs)); 
       t = Array.from({length: N}, (_, i) => i * (duration / (N - 1)));
 
-      // Message and Carrier (use cosine for signals starting at peak)
+      // Message and Carrier (use cosine)
       msg = t.map(tt => Am * Math.cos(2 * Math.PI * fmVal * tt));
       carrier = t.map(tt => Ac * Math.cos(2 * Math.PI * fcVal * tt));
       
@@ -105,14 +100,15 @@
       // DSB-SC: Simple product m(t) * c(t)
       dsb = t.map(tt => Am * Math.cos(2 * Math.PI * fmVal * tt) * Math.cos(2 * Math.PI * fcVal * tt));
       
-      // SSB-SC (USB - Upper Sideband) - Hilbert Transform Method:
-      // SSB = 0.5 * Ac * [ m(t)*cos(wc*t) - m_hat(t)*sin(wc*t) ]
-      // Where m_hat(t) = Am * sin(wm*t) is the Hilbert Transform of m(t)
-      // Note: I've used Am/2 for visual clarity and amplitude scaling.
-      const amplitudeFactor = Am/2;
+      // SSB-SC (USB - Upper Sideband) - Corrected Amplitude for Visibility
+      // SSB = Am * [ m(t)*cos(wc*t) - m_hat(t)*sin(wc*t) ]
+      // Using 'Am' as the overall amplitude factor to ensure visibility on the plot.
+      const amplitudeFactor = Am; 
       ssb = t.map(tt => 
-        (amplitudeFactor * Math.cos(2 * Math.PI * fmVal * tt) * Math.cos(2 * Math.PI * fcVal * tt)) - // In-phase Component
-        (amplitudeFactor * Math.sin(2 * Math.PI * fmVal * tt) * Math.sin(2 * Math.PI * fcVal * tt))   // Quadrature Component
+        // In-phase Component: m(t) * cos(wc*t)
+        (amplitudeFactor * Math.cos(2 * Math.PI * fmVal * tt) * Math.cos(2 * Math.PI * fcVal * tt)) - 
+        // Quadrature Component: m_hat(t) * sin(wc*t)
+        (amplitudeFactor * Math.sin(2 * Math.PI * fmVal * tt) * Math.sin(2 * Math.PI * fcVal * tt))   
       );
 
       generated = true;
@@ -156,7 +152,7 @@
       let dataset = [], color='red', lab='';
       if(type==='AM'){ dataset = am; color='red'; lab='AM Signal'; }
       else if(type==='FM'){ dataset = fmSig; color='green'; lab='FM Signal'; }
-      else if(type==='DSB'){ dataset = dsb; color:'purple'; lab='DSB-SC Signal'; }
+      else if(type==='DSB'){ dataset = dsb; color='purple'; lab='DSB-SC Signal'; }
       else if(type==='SSB'){ dataset = ssb; color='orange'; lab='SSB-SC Signal (USB)'; }
 
       modChart = new Chart(document.getElementById('modCanvas').getContext('2d'), {
