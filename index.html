@@ -100,8 +100,7 @@ function generate() {
   am = t.map(tt => (Ac * (1 + (Am/Ac) * Math.cos(2*Math.PI*fmVal*tt))) * Math.cos(2*Math.PI*fcVal*tt));
   fmSig = t.map(tt => Ac * Math.cos(2*Math.PI*fcVal*tt + beta * Math.sin(2*Math.PI*fmVal*tt)));
   dsb = t.map(tt => Am * Math.cos(2*Math.PI*fmVal*tt) * Math.cos(2*Math.PI*fcVal*tt));
-  // simple SSB approx (not exact Hilbert, but visually similar)
-  ssb = t.map(tt => Am * Math.cos(2*Math.PI*fmVal*tt) * Math.sin(2*Math.PI*fcVal*tt));
+  ssbsc = t.map(tt => (Am * Math.cos(2*Math.PI*fmVal*tt) * Math.cos(2*Math.PI*fcVal*tt)) - (Am * Math.sin(2*Math.PI*fmVal*tt) * Math.sin(2*Math.PI*fcVal*tt)))
 
   generated = true;
   clearAllCharts(); // keep blank until user presses Show
@@ -166,3 +165,4 @@ document.getElementById('showSSB').addEventListener('click', ()=>plotThree('SSB'
 </script>
 </body>
 </html>
+
